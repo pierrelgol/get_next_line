@@ -19,7 +19,7 @@ char	*get_next_line(int fd)
 	char		*curr;
 
 	if (fd < 0 || BUFFER_SIZE <= 0)
-		return (0);
+		return (NULL);
 	prev = gnl_advance(fd, prev);
 	if (!prev)
 		return (NULL);
@@ -31,13 +31,13 @@ char	*get_next_line(int fd)
 char	*gnl_advance(int fd, char *prev)
 {
 	char	*curr;
-	int		count;
+	int	count;
 
-	curr = malloc((BUFFER_SIZE + 1) * sizeof(char));
+	curr = gnl_calloc((BUFFER_SIZE + 1) ,sizeof(char));
 	if (!curr)
 		return (NULL);
 	count = 1;
-	while (!gnl_search(prev, '\n') && count != 0)
+	while (!gnl_search(prev, '\n') && count)
 	{
 		count = read(fd, curr, BUFFER_SIZE);
 		if (count == -1)
@@ -60,23 +60,20 @@ char	*gnl_produce(char *prev)
 	i = 0;
 	if (!*prev)
 		return (NULL);
-	while (prev[i] && prev[i] != '\n')
-		i++;
-	line = gnl_calloc(i + 2, sizeof(char));
+	while (prev[i])
+		if (prev[i++] == '\n')
+			break;
+	line = gnl_calloc(i + 1, sizeof(char));
 	if (!line)
 		return (NULL);
-	i = 0;
+	i ^= i;
 	while (prev[i] && prev[i] != '\n')
 	{
 		line[i] = prev[i];
 		i++;
 	}
 	if (prev[i] == '\n')
-	{
 		line[i] = prev[i];
-		i++;
-	}
-	line[i] = '\0';
 	return (line);
 }
 

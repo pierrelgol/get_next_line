@@ -14,29 +14,24 @@
 #include <limits.h>
 #include <stddef.h>
 
-void	gnl_bzero(void *s, size_t n)
-{
-	unsigned char	*ptr_s;
-	unsigned char	*ptr_end;
-
-	ptr_s = (unsigned char *)s;
-	ptr_end = (unsigned char *)s + n;
-	while (ptr_s < ptr_end)
-		*ptr_s++ = 0;
-}
 
 void	*gnl_calloc(size_t count, size_t size)
 {
 	void	*ptr;
+	char	*temp;
+	size_t	total;
 
 	if (!count || !size)
 		return (malloc(0));
 	if (count > INT_MAX / size)
 		return (NULL);
-	ptr = malloc(size * count);
+	total = (size * count);
+	ptr = malloc(total);
 	if (!ptr)
 		return (NULL);
-	gnl_bzero(ptr, (count * size));
+	temp = ptr;
+	while (temp < ((char*)ptr + total))
+		*temp++ = 0;
 	return (ptr);
 }
 
@@ -47,6 +42,8 @@ size_t	gnl_strlen(char *str)
 	if (!str)
 		return (0);
 	pstr = str;
+	while (*pstr && *(pstr + 1) && *(pstr + 2) && *(pstr + 3))
+		pstr += 4;
 	while (*pstr)
 		++pstr;
 	return (pstr - str);
@@ -54,18 +51,16 @@ size_t	gnl_strlen(char *str)
 
 char	*gnl_search(char *str, int ch)
 {
-	int	i;
 
-	i = 0;
 	if (!str)
 		return (NULL);
 	if (ch == '\0')
 		return ((char *)&str[gnl_strlen(str)]);
-	while (str[i] != '\0')
+	while (*str)
 	{
-		if (str[i] == (char)ch)
-			return ((char *)&str[i]);
-		i++;
+		if (*str == (char)ch)
+			return (str);
+		++str;
 	}
 	return (NULL);
 }
@@ -81,7 +76,7 @@ char	*gnl_join(char *prev, char *curr)
 	if (!prev || !curr)
 		return (NULL);
 	rlen = gnl_strlen(prev) + gnl_strlen(curr);
-	newln = malloc(sizeof(char) * (rlen + 1));
+	newln = gnl_calloc(rlen + 1, sizeof(char));
 	if (newln == NULL)
 		return (NULL);
 	i = -1;
@@ -94,3 +89,4 @@ char	*gnl_join(char *prev, char *curr)
 	free(prev);
 	return (newln);
 }
+
