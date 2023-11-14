@@ -5,76 +5,101 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: plgol.perso <pollivie@student.42.fr>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2023/11/07 23:36:23 by plgol.perso       #+#    #+#             */
-/*   Updated: 2023/11/07 23:36:24 by plgol.perso      ###   ########.fr       */
+/*   Created: 2023/11/14 21:07:07 by plgol.perso       #+#    #+#             */
+/*   Updated: 2023/11/14 21:07:08 by plgol.perso      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line.h"
-#include <stdio.h>
+#include <unistd.h>
 
 char	*get_next_line(int fd)
 {
-	char		*line_buff;
-	char		*next_line;
-	int			len;
-	int			size;
+	static char	*prev;
+	char		*curr;
 
-	len = 0;
-	size = BUFFER_SIZE;
-	line_buff = (char[BUFFER_SIZE + 1]){0};
-	if (fd < 0)
+	if (fd < 0 || BUFFER_SIZE <= 0)
+		return (0);
+	prev = gnl_advance(fd, prev);
+	if (!prev)
 		return (NULL);
-	while (read(fd, &line_buff[len], 1) == 1)
-	{
-		if (line_buff[len] == '\n' || line_buff[len] == 0)
-			break ;
-		len++;
-	}
-	if (len >= 0)
-	{
-		next_line = malloc(len + 1);
-		len = 0;
-		while (*line_buff)
-			next_line[len++] = *line_buff++;
-		next_line[len] = '\0';
-		return (next_line);
-	}
-	return (NULL);
+	curr = gnl_produce(prev);
+	prev = gnl_consume(prev);
+	return (curr);
 }
 
-// int	main(int argc, char **argv)
-// {
-// 	// int	count;
-// 	int	fd;
-// 	char	*ln;
+char	*gnl_advance(int fd, char *prev)
+{
+	char	*curr;
+	int		count;
 
-// 	// count = 1;
-// 	fd = 0;
-// 	ln = NULL;
-// 	if (argc == 2)
-// 	{
-// 		fd = open(argv[1], O_RDONLY);
-// 		ln = get_next_line(fd);
-// 		while (ln != NULL)
-// 		{
-// 			// printf("[%d]%s\n",count++,ln);
-// 			if (ln)
-// 				free(ln);
-// 			ln = get_next_line(fd);
-// 		}
-// 	}
-// 	else
-// 	{
-// 		fd = 0;
-// 		ln = get_next_line(fd);
-// 		while (ln != NULL)
-// 		{
-// 			// printf("[%d]%s\n",count++,ln);
-// 			if (ln)
-// 				free(ln);
-// 			ln = get_next_line(fd);
-// 		}
-// 	}
-// 	return (0);
-// }
+	curr = malloc((BUFFER_SIZE + 1) * sizeof(char));
+	if (!curr)
+		return (NULL);
+	count = 1;
+	while (!gnl_search(prev, '\n') && count != 0)
+	{
+		count = read(fd, curr, BUFFER_SIZE);
+		if (count == -1)
+		{
+			free(curr);
+			return (NULL);
+		}
+		curr[count] = '\0';
+		prev = gnl_join(prev, curr);
+	}
+	free(curr);
+	return (prev);
+}
+
+char	*gnl_produce(char *prev)
+{
+	char	*line;
+	int		i;
+
+	i = 0;
+	if (!*prev)
+		return (NULL);
+	while (prev[i] && prev[i] != '\n')
+		i++;
+	line = gnl_calloc(i + 2, sizeof(char));
+	if (!line)
+		return (NULL);
+	i = 0;
+	while (prev[i] && prev[i] != '\n')
+	{
+		line[i] = prev[i];
+		i++;
+	}
+	if (prev[i] == '\n')
+	{
+		line[i] = prev[i];
+		i++;
+	}
+	line[i] = '\0';
+	return (line);
+}
+
+char	*gnl_consume(char *prev)
+{
+	char	*next;
+	int		i;
+	int		j;
+
+	i = 0;
+	j = 0;
+	while (prev[i] && prev[i] != '\n')
+		i++;
+	if (!prev[i])
+	{
+		free(prev);
+		return (NULL);
+	}
+	next = gnl_calloc(gnl_strlen(prev) - i + 1, sizeof(char));
+	if (!next)
+		return (NULL);
+	while (prev[++i])
+		next[j++] = prev[i];
+	free(prev);
+	return (next);
+}
